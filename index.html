@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>莲斋医意立斋案疏 · 医案检索</title>
+<style>
+  :root {
+    --paper: #f5f0e4;
+    --paper-deep: #ede5d3;
+    --ink: #2b2b2b;
+    --ink-light: #5a5347;
+    --cinnabar: #9e2b22;
+    --cinnabar-soft: #b8534a;
+    --jade: #3d6b5e;
+    --gold: #a8842c;
+    --line: #d8cdb6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 15px; }
+  body {
+    font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.9;
+  }
+  header {
+    background: linear-gradient(180deg, #3a3226 0%, #4a4030 100%);
+    color: #efe6d0;
+    padding: 28px 24px 20px;
+    border-bottom: 4px double var(--gold);
+  }
+  header h1 {
+    font-size: 1.7rem;
+    letter-spacing: .35em;
+    font-weight: 600;
+  }
+  header .sub {
+    margin-top: 6px;
+    font-size: .85rem;
+    color: #c9b98f;
+    letter-spacing: .15em;
+  }
+  .layout { display: flex; min-height: calc(100vh - 120px); }
+
+  /* ---------- sidebar ---------- */
+  aside {
+    width: 250px;
+    flex: none;
+    background: var(--paper-deep);
+    border-right: 1px solid var(--line);
+    padding: 18px 14px;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+    position: sticky;
+    top: 0;
+  }
+  aside h3 {
+    font-size: .95rem;
+    color: var(--cinnabar);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+    margin: 14px 0 8px;
+    letter-spacing: .2em;
+  }
+  aside h3:first-child { margin-top: 0; }
+  .cat-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: .82rem;
+    color: var(--ink-light);
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    line-height: 1.5;
+  }
+  .cat-item:hover { background: #e3d9c2; color: var(--ink); }
+  .cat-item.active { background: var(--cinnabar); color: #f8f3e7; }
+  .cat-item .cnt { float: right; opacity: .65; font-size: .75rem; }
+  .part-label {
+    font-size: .78rem;
+    color: var(--gold);
+    margin: 10px 0 2px;
+    letter-spacing: .3em;
+  }
+
+  /* ---------- main ---------- */
+  main { flex: 1; padding: 20px 28px 60px; max-width: 980px; }
+  .searchbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .searchbar input[type=text] {
+    flex: 1;
+    min-width: 220px;
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: .95rem;
+    border: 1px solid var(--line);
+    background: #fbf8ef;
+    border-radius: 3px;
+    outline: none;
+  }
+  .searchbar input[type=text]:focus { border-color: var(--cinnabar-soft); }
+  .searchbar select {
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: .85rem;
+    border: 1px solid var(--line);
+    background: #fbf8ef;
+    border-radius: 3px;
+  }
+  .chips { margin-bottom: 14px; }
+  .chips span {
+    display: inline-block;
+    font-size: .76rem;
+    padding: 2px 10px;
+    margin: 2px 4px 2px 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-light);
+    background: #fbf8ef;
+  }
+  .chips span:hover, .chips span.on { background: var(--jade); color: #f2efe4; border-color: var(--jade); }
+  .stat { font-size: .8rem; color: var(--ink-light); margin-bottom: 10px; }
+
+  .case-card {
+    background: #fbf8ef;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--cinnabar-soft);
+    border-radius: 3px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: box-shadow .15s;
+  }
+  .case-card:hover { box-shadow: 0 2px 10px rgba(80,60,20,.15); }
+  .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .case-no { color: var(--cinnabar); font-weight: 700; letter-spacing: .1em; }
+  .case-patient { font-weight: 600; }
+  .case-cat { font-size: .74rem; color: var(--gold); }
+  .case-snippet { font-size: .86rem; color: var(--ink-light); margin-top: 6px; }
+  .case-tags { margin-top: 8px; }
+  .tag {
+    display: inline-block;
+    font-size: .72rem;
+    padding: 1px 8px;
+    margin: 2px 4px 2px 0;
+    background: var(--paper-deep);
+    border-radius: 3px;
+    color: var(--jade);
+  }
+  .tag.outcome-bad { color: var(--cinnabar); }
+  mark { background: #f2d98c; padding: 0 1px; }
+
+  /* ---------- detail modal ---------- */
+  .modal-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(40,32,18,.5);
+    z-index: 50;
+  }
+  .modal-mask.show { display: block; }
+  .modal {
+    position: absolute;
+    top: 3vh; bottom: 3vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(860px, 94vw);
+    background: var(--paper);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 14px 22px;
+    background: var(--paper-deep);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-head .t { font-size: 1.05rem; font-weight: 700; color: var(--cinnabar); }
+  .modal-head .nav { display: flex; gap: 6px; }
+  .modal-head button {
+    font-family: inherit;
+    font-size: .8rem;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    background: #fbf8ef;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--ink-light);
+  }
+  .modal-head button:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
+  .modal-body { padding: 20px 26px 30px; overflow-y: auto; }
+  .sec-title {
+    font-size: .92rem;
+    color: var(--cinnabar);
+    letter-spacing: .3em;
+    border-left: 3px solid var(--cinnabar-soft);
+    padding-left: 10px;
+    margin: 22px 0 8px;
+  }
+  .sec-title:first-child { margin-top: 0; }
+  .orig { font-size: .98rem; text-align: justify; }
+  .shu { font-size: .92rem; color: var(--ink-light); text-align: justify; }
+  .fn-list { font-size: .8rem; color: var(--ink-light); }
+  .fn-list li { margin-left: 1.4em; margin-bottom: 2px; }
+  .jiao {
+    font-size: .8rem;
+    color: var(--gold);
+    background: #f4ecd7;
+    padding: 6px 10px;
+    border-radius: 3px;
+    margin: 4px 0;
+  }
+  sup.fn {
+    color: var(--cinnabar);
+    cursor: help;
+    font-size: .72em;
+  }
+  .meta-line { font-size: .8rem; color: var(--ink-light); margin-bottom: 6px; }
+
+  /* ---------- masters tab ---------- */
+  .tabs { display: flex; gap: 0; margin-bottom: 18px; border-bottom: 2px solid var(--line); }
+  .tabs button {
+    font-family: inherit;
+    font-size: .95rem;
+    letter-spacing: .2em;
+    padding: 8px 22px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    color: var(--ink-light);
+  }
+  .tabs button.on { color: var(--cinnabar); border-bottom-color: var(--cinnabar); font-weight: 700; }
+  .master-card {
+    background: #fbf8ef;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+  }
+  .master-card h4 {
+    color: var(--cinnabar);
+    font-size: 1.02rem;
+    margin-bottom: 4px;
+  }
+  .master-card .rel {
+    font-size: .76rem;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .who {
+    font-size: .86rem;
+    font-weight: 700;
+    color: var(--jade);
+    margin-top: 10px;
+  }
+  .who-text { font-size: .86rem; color: var(--ink-light); text-align: justify; }
+  .master-intro {
+    font-size: .82rem;
+    color: var(--ink-light);
+    background: var(--paper-deep);
+    border-radius: 3px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+
+  .pager { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 18px 0; }
+  .pager button {
+    font-family: inherit;
+    padding: 5px 14px;
+    border: 1px solid var(--line);
+    background: #fbf8ef;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: .82rem;
+    color: var(--ink-light);
+  }
+  .pager button:disabled { opacity: .4; cursor: default; }
+  .pager span { font-size: .82rem; color: var(--ink-light); }
+
+  footer {
+    text-align: center;
+    font-size: .75rem;
+    color: var(--ink-light);
+    padding: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; }
+    aside { width: 100%; max-height: 260px; position: static; }
+    main { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>莲斋医意立斋案疏</h1>
+  <div class="sub">明 · 薛己（立斋）医案 ｜ 清 · 叶崧 案疏 ｜ 医案二百五十七则 · 门类三十有四 · 附叶桂、陈士铎、傅青主治法对照</div>
+</header>
+
+<div class="layout">
+  <aside>
+    <h3>门 类</h3>
+    <div id="catList"></div>
+    <h3>常 用 方 剂</h3>
+    <div id="formulaList"></div>
+  </aside>
+
+  <main>
+    <div class="tabs">
+      <button id="tabCases" class="on">医案检索</button>
+      <button id="tabMasters">名家治法对照</button>
+    </div>
+
+    <div id="viewCases">
+      <div class="searchbar">
+        <input type="text" id="q" placeholder="检索原文 / 崧疏 / 脚注，如：补中益气、口眼㖞斜、晡热、肝木乘脾……">
+        <select id="fOutcome">
+          <option value="">转归（全部）</option>
+          <option value="愈">痊愈向安</option>
+          <option value="殁">殁 / 不治</option>
+        </select>
+        <select id="fPart">
+          <option value="">编次（全部）</option>
+          <option value="正编">正编</option>
+          <option value="补遗">补遗</option>
+        </select>
+      </div>
+      <div class="chips" id="activeChips"></div>
+      <div class="stat" id="statLine"></div>
+      <div id="caseList"></div>
+      <div class="pager">
+        <button id="prevPage">上一页</button>
+        <span id="pageInfo"></span>
+        <button id="nextPage">下一页</button>
+      </div>
+    </div>
+
+    <div id="viewMasters" style="display:none">
+      <div class="master-intro" id="masterIntro"></div>
+      <div id="masterList"></div>
+    </div>
+  </main>
+</div>
+
+<footer>《莲斋医意立斋案疏》医案数据库 · 原文以精简版为据，校按、脚注悉仍其旧 ｜ 仅供文献研究之用</footer>
+
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="t" id="mTitle"></span>
+      <span class="nav">
+        <button id="mPrev">← 前案</button>
+        <button id="mNext">后案 →</button>
+        <button id="mClose">关闭</button>
+      </span>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<script src="data/data.js"></script>
+<script>
+(function () {
+  const DATA = window.CASES_DATA;
+  const MASTERS = window.MASTERS_DATA;
+  const cases = DATA.cases;
+  const PAGE_SIZE = 20;
+
+  const state = {
+    q: "", cat: "", formula: "", outcome: "", part: "", page: 1, current: -1
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  /* ---------- sidebar ---------- */
+  const catList = $("catList");
+  let lastPart = "";
+  DATA.categories.forEach((c) => {
+    if (c.part !== lastPart) {
+      const pl = document.createElement("div");
+      pl.className = "part-label";
+      pl.textContent = "— " + c.part + " —";
+      catList.appendChild(pl);
+      lastPart = c.part;
+    }
+    const b = document.createElement("button");
+    b.className = "cat-item";
+    b.dataset.cat = c.category;
+    b.innerHTML = esc(c.category) + '<span class="cnt">' + c.count + "</span>";
+    b.onclick = () => {
+      state.cat = state.cat === c.category ? "" : c.category;
+      state.page = 1;
+      render();
+    };
+    catList.appendChild(b);
+  });
+
+  // top formulas
+  const fcnt = {};
+  cases.forEach((c) => c.formulas.forEach((f) => (fcnt[f] = (fcnt[f] || 0) + 1)));
+  const topF = Object.entries(fcnt).sort((a, b) => b[1] - a[1]).slice(0, 18);
+  const formulaList = $("formulaList");
+  topF.forEach(([f, n]) => {
+    const b = document.createElement("button");
+    b.className = "cat-item";
+    b.dataset.formula = f;
+    b.innerHTML = esc(f) + '<span class="cnt">' + n + "</span>";
+    b.onclick = () => {
+      state.formula = state.formula === f ? "" : f;
+      state.page = 1;
+      render();
+    };
+    formulaList.appendChild(b);
+  });
+
+  /* ---------- filtering ---------- */
+  function match(c) {
+    if (state.part && c.part !== state.part) return false;
+    if (state.cat && c.category !== state.cat) return false;
+    if (state.formula && !c.formulas.includes(state.formula)) return false;
+    if (state.outcome === "愈" && !/愈|痊|安|苏/.test(c.outcome)) return false;
+    if (state.outcome === "殁" && !/殁|殒|不治|不起/.test(c.outcome)) return false;
+    if (state.q) {
+      const q = state.q;
+      const hay = c.original + c.shu + c.patient + c.category + c.formulas.join(" ") +
+        c.footnotes.map((f) => f.text).join(" ");
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function hl(text) {
+    let t = esc(text);
+    if (state.q && state.q.length >= 1) {
+      const q = esc(state.q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      t = t.replace(new RegExp(q, "g"), (m) => "<mark>" + m + "</mark>");
+    }
+    return t;
+  }
+
+  /* ---------- render list ---------- */
+  function render() {
+    // sidebar active
+    document.querySelectorAll(".cat-item").forEach((b) => {
+      b.classList.toggle("active",
+        (b.dataset.cat && b.dataset.cat === state.cat) ||
+        (b.dataset.formula && b.dataset.formula === state.formula));
+    });
+
+    const list = cases.filter(match);
+    const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    if (state.page > pages) state.page = pages;
+    const slice = list.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
+
+    $("statLine").textContent =
+      "共 " + list.length + " 案" +
+      (state.cat ? " ｜ 门类：" + state.cat : "") +
+      (state.formula ? " ｜ 方剂：" + state.formula : "") +
+      (state.q ? " ｜ 检索：" + state.q : "");
+
+    // chips
+    const chips = [];
+    if (state.cat) chips.push(["门类", state.cat, () => (state.cat = "")]);
+    if (state.formula) chips.push(["方剂", state.formula, () => (state.formula = "")]);
+    if (state.q) chips.push(["检索", state.q, () => { state.q = ""; $("q").value = ""; }]);
+    $("activeChips").innerHTML = "";
+    chips.forEach(([k, v, clear]) => {
+      const s = document.createElement("span");
+      s.className = "on";
+      s.textContent = k + "：" + v + " ✕";
+      s.onclick = () => { clear(); state.page = 1; render(); };
+      $("activeChips").appendChild(s);
+    });
+
+    const box = $("caseList");
+    box.innerHTML = "";
+    slice.forEach((c) => {
+      const div = document.createElement("div");
+      div.className = "case-card";
+      const bad = /殁|殒|不治|不起/.test(c.outcome);
+      div.innerHTML =
+        '<div class="case-head">' +
+          '<span><span class="case-no">案' + c.no + '</span>　<span class="case-patient">' + hl(c.patient) + "</span></span>" +
+          '<span class="case-cat">' + esc(c.part) + " · " + esc(c.category) + "</span>" +
+        "</div>" +
+        '<div class="case-snippet">' + hl(c.original.slice(0, 110)) + "……</div>" +
+        '<div class="case-tags">' +
+          c.formulas.slice(0, 5).map((f) => '<span class="tag">' + esc(f) + "</span>").join("") +
+          (c.outcome ? '<span class="tag' + (bad ? " outcome-bad" : "") + '">' + esc(c.outcome) + "</span>" : "") +
+        "</div>";
+      div.onclick = () => openCase(c.no);
+      box.appendChild(div);
+    });
+
+    $("pageInfo").textContent = state.page + " / " + pages;
+    $("prevPage").disabled = state.page <= 1;
+    $("nextPage").disabled = state.page >= pages;
+  }
+
+  $("prevPage").onclick = () => { state.page--; render(); window.scrollTo(0, 0); };
+  $("nextPage").onclick = () => { state.page++; render(); window.scrollTo(0, 0); };
+
+  let deb;
+  $("q").addEventListener("input", (e) => {
+    clearTimeout(deb);
+    deb = setTimeout(() => {
+      state.q = e.target.value.trim();
+      state.page = 1;
+      render();
+    }, 200);
+  });
+  $("fOutcome").onchange = (e) => { state.outcome = e.target.value; state.page = 1; render(); };
+  $("fPart").onchange = (e) => { state.part = e.target.value; state.page = 1; render(); };
+
+  /* ---------- detail modal ---------- */
+  function fnSup(text, footnotes) {
+    // wrap ①② markers in superscript with tooltip
+    return text.replace(/([①②③④⑤⑥⑦⑧⑨⑩])/g, (m) => {
+      const f = footnotes.find((x) => x.mark === m);
+      if (f) return '<sup class="fn" title="' + esc(f.text) + '">' + m + "</sup>";
+      return m;
+    });
+  }
+
+  function openCase(no) {
+    const c = cases[no - 1];
+    state.current = no;
+    $("mTitle").textContent = "案" + c.no + " ｜ " + c.part + " · " + c.category;
+    let html = "";
+    html += '<div class="meta-line">患者：' + esc(c.patient) +
+      (c.formulas.length ? "　｜　方药：" + c.formulas.map(esc).join("、") : "") +
+      (c.outcome ? "　｜　转归：" + esc(c.outcome) : "") + "</div>";
+    html += '<div class="sec-title">医案原文</div>';
+    html += '<div class="orig">' + fnSup(esc(c.original), c.footnotes) + "</div>";
+    c.jiaoju.forEach((j) => {
+      html += '<div class="jiao">校按：' + esc(j) + "</div>";
+    });
+    if (c.footnotes.length) {
+      html += '<div class="sec-title">脚注</div><ul class="fn-list">';
+      c.footnotes.forEach((f) => {
+        html += "<li>" + esc(f.mark + "　" + f.text) + "</li>";
+      });
+      html += "</ul>";
+    }
+    if (c.shu) {
+      html += '<div class="sec-title">崧疏曰</div>';
+      html += '<div class="shu">' + esc(c.shu) + "</div>";
+    }
+    $("mBody").innerHTML = html;
+    $("modalMask").classList.add("show");
+    $("mBody").scrollTop = 0;
+  }
+  function closeCase() { $("modalMask").classList.remove("show"); state.current = -1; }
+  $("mClose").onclick = closeCase;
+  $("modalMask").onclick = (e) => { if (e.target.id === "modalMask") closeCase(); };
+  $("mPrev").onclick = () => { if (state.current > 1) openCase(state.current - 1); };
+  $("mNext").onclick = () => { if (state.current < cases.length) openCase(state.current + 1); };
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeCase();
+  });
+
+  /* ---------- masters ---------- */
+  $("masterIntro").innerHTML = MASTERS.masters.map((m) =>
+    "<b>" + esc(m.name) + "</b>（" + esc(m.period) + "，" + esc(m.book) + "）：" + esc(m.note)
+  ).join("<br>");
+
+  const NAME = { ye: "叶桂（天士）", chen: "陈士铎（远公）", fu: "傅山（青主）" };
+  const ml = $("masterList");
+  MASTERS.topics.forEach((t) => {
+    const d = document.createElement("div");
+    d.className = "master-card";
+    d.innerHTML =
+      "<h4>" + esc(t.disease) + "</h4>" +
+      '<div class="rel">对应门类：' + t.categories.map(esc).join("、") + "</div>" +
+      '<div class="who">薛己（立斋）</div><div class="who-text">' + esc(t.xue) + "</div>" +
+      '<div class="who">' + NAME.ye + "</div><div class=\"who-text\">" + esc(t.ye) + "</div>" +
+      '<div class="who">' + NAME.chen + "</div><div class=\"who-text\">" + esc(t.chen) + "</div>" +
+      '<div class="who">' + NAME.fu + "</div><div class=\"who-text\">" + esc(t.fu) + "</div>";
+    ml.appendChild(d);
+  });
+
+  /* ---------- tabs ---------- */
+  $("tabCases").onclick = () => {
+    $("tabCases").classList.add("on"); $("tabMasters").classList.remove("on");
+    $("viewCases").style.display = ""; $("viewMasters").style.display = "none";
+  };
+  $("tabMasters").onclick = () => {
+    $("tabMasters").classList.add("on"); $("tabCases").classList.remove("on");
+    $("viewMasters").style.display = ""; $("viewCases").style.display = "none";
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
