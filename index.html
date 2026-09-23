@@ -268,6 +268,25 @@
     margin-top: 10px;
   }
   .who-text { font-size: .86rem; color: var(--ink-light); text-align: justify; }
+  .canon-box {
+    margin-top: 12px;
+    background: #f3ecda;
+    border-left: 3px solid var(--gold);
+    border-radius: 3px;
+    padding: 10px 14px;
+  }
+  .canon-box .c-title {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: .25em;
+    margin-bottom: 6px;
+  }
+  .canon-item { margin-bottom: 8px; }
+  .canon-item:last-child { margin-bottom: 0; }
+  .canon-q { font-size: .86rem; color: var(--ink); }
+  .canon-s { font-size: .78rem; color: var(--cinnabar); }
+  .canon-n { font-size: .78rem; color: var(--ink-light); }
   .master-intro {
     font-size: .82rem;
     color: var(--ink-light);
@@ -591,7 +610,16 @@
       '<div class="who">薛己（立斋）</div><div class="who-text">' + esc(t.xue) + "</div>" +
       '<div class="who">' + NAME.ye + "</div><div class=\"who-text\">" + esc(t.ye) + "</div>" +
       '<div class="who">' + NAME.chen + "</div><div class=\"who-text\">" + esc(t.chen) + "</div>" +
-      '<div class="who">' + NAME.fu + "</div><div class=\"who-text\">" + esc(t.fu) + "</div>";
+      '<div class="who">' + NAME.fu + "</div><div class=\"who-text\">" + esc(t.fu) + "</div>" +
+      (t.canon && t.canon.length ?
+        '<div class="canon-box"><div class="c-title">经典溯源 · 内经 / 伤寒论</div>' +
+        t.canon.map((c) =>
+          '<div class="canon-item">' +
+            '<div class="canon-q">「' + esc(c.q) + '」<span class="canon-s">——' + esc(c.s) + "</span></div>" +
+            '<div class="canon-n">' + esc(c.n) + "</div>" +
+          "</div>"
+        ).join("") + "</div>"
+        : "");
     ml.appendChild(d);
   });
 
